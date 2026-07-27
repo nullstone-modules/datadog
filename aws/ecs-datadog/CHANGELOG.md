@@ -3,6 +3,11 @@
 **Breaking.** This capability is now logs-only. Attach `aws-ecs-otel-datadog-agent` alongside it to
 keep traces and custom metrics.
 
+**Deprecated.** Use `aws-datadog-logs`, which does the same job and also supports Lambda apps. Once
+the Datadog Agent came out of this module, the only thing left tying it to ECS was the log pipeline's
+stream parsing — so it made no sense to keep a runtime in the module name. This module stays
+published and functional, frozen at ECS.
+
 * Removed the `datadog-agent` sidecar entirely, along with the IAM policy and execution-role
   attachment that let it read the Datadog API key. This module no longer adds containers to your task.
 * Removed the `env` output — `OTEL_EXPORTER_OTLP_ENDPOINT`, `DD_ENV`, and `DD_SERVICE` are now

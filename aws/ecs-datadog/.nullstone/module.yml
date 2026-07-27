@@ -1,7 +1,7 @@
 org_name: nullstone
 name: aws-ecs-datadog
-friendly_name: Datadog Logs
-description: Emit logs from an app backed by Cloudwatch logs to Datadog
+friendly_name: Datadog Logs (ECS, deprecated)
+description: 'Deprecated: use aws-datadog-logs, which supports ECS/Fargate and Lambda. Emits logs from an ECS app backed by Cloudwatch logs to Datadog'
 category: capability
 subcategory: telemetry
 provider_types:

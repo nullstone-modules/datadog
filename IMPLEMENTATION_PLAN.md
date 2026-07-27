@@ -2,8 +2,10 @@
 
 Card: [NUL-157](https://linear.app/nullstone/issue/NUL-157/built-in-support-for-sending-logs-traces-and-metrics-to-datadog)
 
-All eight modules are written, formatted, validated (`tofu validate`), and provider-locked across
-five platforms. Nothing has been applied against real infrastructure — see [What's left](#whats-left).
+All nine modules are written, formatted, and validated (`tofu validate`). The four datastore modules
+are provider-locked across five platforms; the five capability modules carry no lock file, since they
+are composed into the app's workspace rather than applied as their own. Nothing has been applied
+against real infrastructure — see [What's left](#whats-left).
 
 ---
 
@@ -22,12 +24,14 @@ five platforms. Nothing has been applied against real infrastructure — see [Wh
 | 9 | No git history preservation | Files copied in; archived repos keep their history, root README points at them. |
 | 10 | First tag `v0.2.0` | Above `aws-datadog` v0.1.7, and a breaking bump under 0.x. The unreleased `aws-ecs-datadog` 0.1.4 notes folded into 0.2.0. |
 | 11 | Cloud Run sidecar out of scope | Follow-up card. |
+| 12 | **`aws-datadog-logs` replaces `aws-ecs-datadog`** | Once decision 1 removed the agent, the only thing tying the capability to ECS was the log pipeline's stream parsing — `log_group_name` is the sole `app_metadata` key it reads, and both Lambda app modules publish it. The new module carries `appCategories: [container, serverless]` and picks its pipeline from the detected app type. `aws-ecs-datadog` stays published and functional, frozen at ECS. |
 
 ## Delivery paths
 
 | Path | Modules | Needs agentless intake? |
 |------|---------|-------------------------|
-| ECS logs | `aws/datadog` → `aws/ecs-datadog` | No |
+| ECS or Lambda logs | `aws/datadog` → `aws/datadog-logs` | No |
+| Lambda traces + metrics | `aws/datadog` → `aws/otel-direct-datadog` (no sidecars on Lambda) | **Yes** |
 | ECS traces + container/custom metrics | `aws/datadog` → `aws/ecs-otel-datadog-agent` | No |
 | Account-wide CloudWatch metrics | `aws/datadog` with `metric_stream_namespaces` | No |
 | Cluster-wide k8s | `aws|gcp/datadog` → `*-k8s-otel-datadog-extender` → ADOT / GKE collector | **Yes** |
@@ -111,9 +115,16 @@ distinct too (`datadog-otel-collector`, 4317/4318, `<resource>-datadog-otel`).
 
 ### Verification (nothing below has been run)
 
-- [ ] ECS: app + `aws/ecs-datadog` alone → logs land, no sidecar and no OTLP endpoint injected.
-- [ ] ECS: app + both capabilities → logs via Firehose, traces + container metrics via the sidecar;
-      kill the sidecar → task stays up.
+- [ ] ECS: app + `aws/datadog-logs` alone → logs land, no sidecar and no OTLP endpoint injected.
+- [ ] ECS: app + `aws/datadog-logs` + `aws/ecs-otel-datadog-agent` → logs via Firehose, traces +
+      container metrics via the sidecar; kill the sidecar → task stays up.
+- [ ] Lambda: app + `aws/datadog-logs` → logs land, tagged `version` and `instance_id`. **Datadog
+      validates grok rules against the `samples` at apply time, so a malformed rule surfaces there —
+      but confirm the tags actually populate on real streams.**
+- [ ] Lambda: app + `aws/otel-direct-datadog` (with `logs` left out of `signals`) → traces and
+      metrics, no duplicate log ingest.
+- [ ] `aws/datadog-logs` app-type detection picks `ecs` for Fargate/ECS apps and `lambda` for both
+      Lambda app modules, with no `app_type` override set.
 - [ ] ECS: datastore with `metric_stream_namespaces = ["AWS/ECS"]` → CloudWatch metrics in Datadog,
       exactly once.
 - [ ] EKS: `aws/datadog` → extender → `aws-eks-otel-adot` on its **stock ADOT image** → all three

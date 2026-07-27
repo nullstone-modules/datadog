@@ -1,5 +1,9 @@
 # Datadog Logs for ECS/Fargate
 
+> **Deprecated — use [`aws-datadog-logs`](../datadog-logs) instead.** That module does the same job
+> and also supports Lambda apps. This one stays published and functional, frozen at ECS; swap the
+> capability when convenient. See [Migrating from `aws-ecs-datadog`](../datadog-logs/README.md#migrating-from-aws-ecs-datadog).
+
 This capability sends application **logs** to Datadog for ECS (Fargate-based or EC2-based).
 
 It adds no containers to your task. Logs already land in CloudWatch; this module subscribes that log
