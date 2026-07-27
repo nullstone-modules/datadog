@@ -1,0 +1,16 @@
+org_name: nullstone
+name: gcp-k8s-otel-datadog-extender
+friendly_name: Datadog OpenTelemetry Extender
+description: Extends an OpenTelemetry collector on GCP Kubernetes to export to Datadog
+category: datastore
+subcategory: ""
+provider_types:
+    - gcp
+platform: otel-extender
+subplatform: datadog
+type: ""
+appCategories: []
+is_public: true
+tool_name: opentofu
+include: []
+source_url: https://github.com/nullstone-modules/datadog/tree/master/gcp/k8s-otel-datadog-extender

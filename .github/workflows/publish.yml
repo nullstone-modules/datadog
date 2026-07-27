@@ -1,0 +1,49 @@
+name: Nullstone
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: read-all
+
+env:
+  NULLSTONE_ORG: nullstone
+  NULLSTONE_API_KEY: ${{ secrets.NULLSTONE_API_KEY }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # One module failing must not cancel the other publishes.
+      fail-fast: false
+      matrix:
+        module:
+          - aws/datadog
+          - aws/ecs-datadog
+          - aws/ecs-otel-datadog-agent
+          - aws/otel-direct-datadog
+          - aws/k8s-otel-datadog-extender
+          - gcp/datadog
+          - gcp/otel-direct-datadog
+          - gcp/k8s-otel-datadog-extender
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.module }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Nullstone
+        uses: nullstone-io/setup-nullstone-action@v0
+
+      - name: Find version
+        id: version
+        run: echo "MODULE_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - id: publish
+        name: Publish
+        run: nullstone modules publish --version=${{ env.MODULE_VERSION }}

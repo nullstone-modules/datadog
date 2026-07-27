@@ -1,0 +1,17 @@
+org_name: nullstone
+name: aws-ecs-otel-datadog-agent
+friendly_name: Datadog OpenTelemetry Sidecar
+description: Runs an OTLP collector sidecar on an ECS/Fargate task that exports traces and metrics to Datadog
+category: capability
+subcategory: telemetry
+provider_types:
+    - aws
+platform: otel
+subplatform: datadog
+type: ""
+appCategories:
+    - container
+is_public: true
+tool_name: opentofu
+include: []
+source_url: https://github.com/nullstone-modules/datadog/tree/master/aws/ecs-otel-datadog-agent
