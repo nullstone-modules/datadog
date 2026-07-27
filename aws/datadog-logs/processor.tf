@@ -129,12 +129,17 @@ resource "datadog_logs_custom_pipeline" "lambda" {
       ]
 
       grok {
+        // Square brackets are escaped in the match rule itself, per Datadog's own example
+        // (`%{word:app}\[%{number:logger.thread_id}\]`).
         match_rules = "grok_parser %%{date_part}/\\[%%{version_part:version}\\]%%{instance_part:instance_id}"
-        // Heredocs do not process backslash escapes, so `\]` here reaches Datadog as `\]`.
-        // Writing `\\]` would deliver a literal double backslash and break the character class.
+
+        // Inside regex(), Datadog evaluates the argument as a string first, so a backslash has to be
+        // written `\\`. Rather than depend on that round trip, none of these patterns use a
+        // backslash at all: `version_part` is a positive character class, so it stops at the `]`
+        // without needing to negate it. A Lambda version is `$LATEST` or an integer.
         support_rules = <<EOF
 date_part %%{regex("[0-9]{4}/[0-9]{2}/[0-9]{2}")}
-version_part %%{regex("[^\]]+")}
+version_part %%{regex("[$A-Za-z0-9_.-]+")}
 instance_part %%{regex(".+")}
 EOF
       }
