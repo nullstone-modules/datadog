@@ -2,8 +2,10 @@
 
 Card: [NUL-157](https://linear.app/nullstone/issue/NUL-157/built-in-support-for-sending-logs-traces-and-metrics-to-datadog)
 
-All nine modules are written, formatted, validated (`tofu validate`), and provider-locked across
-five platforms. Nothing has been applied against real infrastructure — see [What's left](#whats-left).
+All nine modules are written, formatted, and validated (`tofu validate`). The four datastore modules
+are provider-locked across five platforms; the five capability modules carry no lock file, since they
+are composed into the app's workspace rather than applied as their own. Nothing has been applied
+against real infrastructure — see [What's left](#whats-left).
 
 ---
 

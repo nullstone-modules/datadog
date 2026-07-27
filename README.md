@@ -4,8 +4,12 @@ Nullstone modules for delivering application telemetry — **logs, traces, and m
 [Datadog](https://docs.datadoghq.com/opentelemetry/) on AWS and GCP.
 
 Every Datadog module lives in this repo. Each module directory is self-contained: its own
-`.nullstone/module.yml`, `README.md`, `CHANGELOG.md`, `Makefile`, `.terraform.lock.hcl`, and `.tf`
-files. Nothing module-scoped lives at the repo root.
+`.nullstone/module.yml`, `README.md`, `CHANGELOG.md`, `Makefile`, and `.tf` files. Nothing
+module-scoped lives at the repo root.
+
+Datastore modules also carry a `.terraform.lock.hcl`, since they are applied as their own workspace.
+Capability modules do not — they are composed into the app's workspace, whose lock file governs
+provider selection.
 
 ## Modules
 
