@@ -20,6 +20,7 @@ jobs:
       matrix:
         module:
           - aws/datadog
+          - aws/datadog-logs
           - aws/ecs-datadog
           - aws/ecs-otel-datadog-agent
           - aws/otel-direct-datadog

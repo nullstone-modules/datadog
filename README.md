@@ -12,7 +12,8 @@ files. Nothing module-scoped lives at the repo root.
 | Directory | Registered name | Kind | What it does |
 |-----------|-----------------|------|--------------|
 | `aws/datadog` | `aws-datadog` | datastore | API/App keys in Secrets Manager, Firehose delivery streams for logs and metrics, and an optional CloudWatch metric stream. |
-| `aws/ecs-datadog` | `aws-ecs-datadog` | capability | Ships an ECS app's logs CloudWatch → Firehose → Datadog, plus the log pipeline that tags `container` and `task_id`. **Logs only.** |
+| `aws/datadog-logs` | `aws-datadog-logs` | capability | Ships an app's logs CloudWatch → Firehose → Datadog, plus the log pipeline that parses the stream name. **ECS/Fargate and Lambda.** |
+| `aws/ecs-datadog` | `aws-ecs-datadog` | capability | **Deprecated** — the ECS-only predecessor of `aws-datadog-logs`. Still published and functional. |
 | `aws/ecs-otel-datadog-agent` | `aws-ecs-otel-datadog-agent` | capability | OTLP collector sidecar on an ECS/Fargate task: traces and custom metrics from the app, plus per-container metrics from the task metadata endpoint. |
 | `aws/k8s-otel-datadog-extender` | `aws-k8s-otel-datadog-extender` | datastore | OTEL config fragment adding Datadog exporters to a collector on EKS. |
 | `aws/otel-direct-datadog` | `aws-otel-direct-datadog` | capability | Points an AWS app's OTEL SDK straight at Datadog's OTLP intake — no collector, no agent. |
@@ -49,7 +50,15 @@ aws-eks-otel-adot / gcp-gke-otel-collector
 ```
 aws-datadog
         ↑ datadog connection
-aws-ecs-datadog (logs)  +  aws-ecs-otel-datadog-agent (traces, metrics)
+aws-datadog-logs (logs)  +  aws-ecs-otel-datadog-agent (traces, metrics)
+```
+
+**Path 4 — Lambda.** No sidecars available, so logs come off CloudWatch and the SDK exports directly.
+
+```
+aws-datadog
+        ↑ datadog connection
+aws-datadog-logs (logs)  +  aws-otel-direct-datadog (traces, metrics)
 ```
 
 ## Which signal comes from where
@@ -59,13 +68,15 @@ the same data.
 
 | Setup | Logs | Traces | Metrics |
 |-------|------|--------|---------|
-| `aws-ecs-datadog` alone | Firehose | — | Datastore metric stream, if enabled |
-| `aws-ecs-datadog` + `aws-ecs-otel-datadog-agent` | Firehose | Sidecar | Sidecar (container + custom) |
+| `aws-datadog-logs` alone | Firehose | — | Datastore metric stream, if enabled |
+| `aws-datadog-logs` + `aws-ecs-otel-datadog-agent` (ECS) | Firehose | Sidecar | Sidecar (container + custom) |
+| `aws-datadog-logs` + `aws-otel-direct-datadog` (Lambda) | Firehose | App SDK | App SDK |
 | k8s extender | Collector | Collector | Collector |
-| Direct capability | App SDK | App SDK | App SDK |
+| Direct capability alone | App SDK | App SDK | App SDK |
 
 `aws-ecs-otel-datadog-agent` deliberately ships **no** logs pipeline by default, so it can sit
-alongside `aws-ecs-datadog` without double-billing log ingest.
+alongside `aws-datadog-logs` without double-billing log ingest. When pairing the direct capability
+with `aws-datadog-logs` on Lambda, leave `logs` out of its `signals` for the same reason.
 
 ## Agentless OTLP intake
 
