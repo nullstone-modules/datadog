@@ -1,0 +1,16 @@
+org_name: nullstone
+name: gcp-datadog
+friendly_name: Datadog
+description: Creates a Nullstone datastore holding Datadog credentials
+category: datastore
+subcategory: ""
+provider_types:
+    - gcp
+platform: datadog
+subplatform: ""
+type: ""
+appCategories: []
+is_public: true
+tool_name: opentofu
+include: []
+source_url: https://github.com/nullstone-modules/datadog/tree/master/gcp/datadog

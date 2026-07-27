@@ -1,0 +1,18 @@
+org_name: nullstone
+name: aws-otel-direct-datadog
+friendly_name: Datadog OpenTelemetry (Direct)
+description: Configures an application's OTEL SDK to export directly to Datadog
+category: capability
+subcategory: telemetry
+provider_types:
+    - aws
+platform: otel
+subplatform: datadog
+type: ""
+appCategories:
+    - container
+    - serverless
+is_public: true
+tool_name: opentofu
+include: []
+source_url: https://github.com/nullstone-modules/datadog/tree/master/aws/otel-direct-datadog
