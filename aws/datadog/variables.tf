@@ -57,19 +57,17 @@ EOF
 
 // --- Agentless OTLP intake ---------------------------------------------------------------------
 //
-// Datadog's direct OTLP intake endpoints are per-signal, and their hostnames vary by Datadog site.
-// Datadog's docs render them from a site selector rather than publishing a table, and access is
-// granted per organization, so they are configured explicitly here rather than derived from
-// `region`. Consumers (the k8s extenders and the direct capabilities) fail with an actionable error
-// when they need an endpoint that was left empty.
+// Datadog's direct OTLP intake is per-signal and lives at `otlp.<site>/v1/<signal>`, so all three
+// endpoints are derived from `region` in sites.tf. These variables exist only to override that for
+// an org whose intake lives somewhere else. Used by the k8s extenders and the direct capabilities.
 
 variable "otlp_logs_endpoint" {
   type        = string
   default     = ""
   description = <<EOF
-Datadog's OTLP logs intake endpoint for your site, including the `/v1/logs` path.
-Find it at https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/logs/ with your site selected.
-Required by the k8s extenders and direct capabilities when forwarding logs; ignored otherwise.
+Override for Datadog's OTLP logs intake endpoint, including the `/v1/logs` path.
+Defaults to `https://otlp.<site>/v1/logs`, derived from `region`.
+See https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/logs/.
 EOF
 }
 
@@ -77,9 +75,9 @@ variable "otlp_metrics_endpoint" {
   type        = string
   default     = ""
   description = <<EOF
-Datadog's OTLP metrics intake endpoint for your site, including the `/v1/metrics` path.
-Find it at https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/metrics/ with your site selected.
-Required by the k8s extenders and direct capabilities when forwarding metrics; ignored otherwise.
+Override for Datadog's OTLP metrics intake endpoint, including the `/v1/metrics` path.
+Defaults to `https://otlp.<site>/v1/metrics`, derived from `region`.
+See https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/metrics/.
 EOF
 }
 
@@ -87,8 +85,8 @@ variable "otlp_traces_endpoint" {
   type        = string
   default     = ""
   description = <<EOF
-Datadog's OTLP traces intake endpoint for your site, including the `/v1/traces` path.
-Find it at https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/traces/ with your site selected.
-Required by the k8s extenders and direct capabilities when forwarding traces; ignored otherwise.
+Override for Datadog's OTLP traces intake endpoint, including the `/v1/traces` path.
+Defaults to `https://otlp.<site>/v1/traces`, derived from `region`.
+See https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/traces/.
 EOF
 }

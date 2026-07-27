@@ -51,8 +51,9 @@ Secret env vars (via `secrets`), for each signal in `signals`:
 
 ## Requirements
 
-The connected `aws-datadog` datastore must have an intake endpoint configured for every signal you
-request. If one is missing, this module fails at plan time naming the signals that need it.
+The connected `aws-datadog` datastore supplies the intake endpoints, derived from its Datadog site
+(`https://otlp.<site>/v1/<signal>`). A datastore published before v0.2.0 has no such outputs, and
+this module then fails at plan time naming the signals that need them.
 
 > **Datadog gates access to the OTLP intake per organization.** Open
 > https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/ with your site selected to get the

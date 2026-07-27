@@ -27,22 +27,21 @@ normalize to `eu1` and `us1-fed`, matching `aws-datadog`.
 
 ## Agentless OTLP intake
 
-Every GCP delivery path uses Datadog's **agentless OTLP intake**, so at least one of these is always
-required:
+Every GCP delivery path uses Datadog's **agentless OTLP intake**. It is per-signal and lives at
+`otlp.<site>`, so all three endpoints are derived from `region`:
 
-```hcl
-otlp_logs_endpoint    = "..."   # https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/logs/
-otlp_metrics_endpoint = "..."   # https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/metrics/
-otlp_traces_endpoint  = "..."   # https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/traces/
-```
+| Signal | Endpoint |
+|--------|----------|
+| logs | `https://otlp.<site>/v1/logs` |
+| metrics | `https://otlp.<site>/v1/metrics` |
+| traces | `https://otlp.<site>/v1/traces` |
 
-The endpoints are per-signal, their hostnames vary by Datadog site, and **Datadog grants access to
-them per organization** — they are not enabled for every account by default. Open each page above
-with your Datadog site selected and copy the endpoint it shows. If a page reports that your
-organization lacks access, contact Datadog support to have the intake enabled.
+Nothing to configure in the normal case. `otlp_logs_endpoint`, `otlp_metrics_endpoint`, and
+`otlp_traces_endpoint` override individual endpoints for an org whose intake lives elsewhere.
 
-Leave a signal's endpoint empty if you don't intend to forward it; consumers fail with an actionable
-error if they need one that isn't set.
+> **Datadog grants access to the OTLP intake per organization.** The endpoints exist for every site,
+> but yours may not be enabled — if telemetry is rejected, contact Datadog support. See
+> https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/.
 
 ## Variables
 
@@ -51,6 +50,6 @@ error if they need one that isn't set.
 | `region` | `us1` | Datadog site code. |
 | `api_key` | — | Datadog API key. Stored in Secret Manager. |
 | `app_key` | — | Datadog App key. Stored in Secret Manager. |
-| `otlp_logs_endpoint` | `""` | Agentless OTLP logs intake endpoint. |
-| `otlp_metrics_endpoint` | `""` | Agentless OTLP metrics intake endpoint. |
-| `otlp_traces_endpoint` | `""` | Agentless OTLP traces intake endpoint. |
+| `otlp_logs_endpoint` | derived | Override for the OTLP logs intake endpoint. |
+| `otlp_metrics_endpoint` | derived | Override for the OTLP metrics intake endpoint. |
+| `otlp_traces_endpoint` | derived | Override for the OTLP traces intake endpoint. |

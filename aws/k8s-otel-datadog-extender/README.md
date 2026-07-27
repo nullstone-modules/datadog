@@ -45,16 +45,10 @@ rather than one shared exporter with per-signal endpoint overrides.
 
 ## Requirements
 
-The connected `aws-datadog` datastore must have an intake endpoint configured for every signal you
-request:
-
-```hcl
-otlp_logs_endpoint    = "..."
-otlp_metrics_endpoint = "..."
-otlp_traces_endpoint  = "..."
-```
-
-If one is missing, this module fails at plan time naming the signals that need it.
+The connected `aws-datadog` datastore supplies the intake endpoints. It derives them from its Datadog
+site (`https://otlp.<site>/v1/<signal>`), so there is nothing to configure — but a datastore
+published before v0.2.0 has no such outputs, and this module then fails at plan time naming the
+signals that need them. Upgrade the datastore, or set `otlp_<signal>_endpoint` on it explicitly.
 
 > **Datadog gates access to the OTLP intake per organization.** Open
 > https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/ with your site selected to get the

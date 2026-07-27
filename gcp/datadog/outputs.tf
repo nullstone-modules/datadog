@@ -14,18 +14,18 @@ output "datadog_api_url" {
 }
 
 output "otlp_logs_endpoint" {
-  value       = var.otlp_logs_endpoint
-  description = "string ||| Datadog's agentless OTLP logs intake endpoint. Empty when not configured."
+  value       = local.otlp_logs_endpoint
+  description = "string ||| Datadog's agentless OTLP logs intake endpoint, defaulted from the configured Datadog site."
 }
 
 output "otlp_metrics_endpoint" {
-  value       = var.otlp_metrics_endpoint
-  description = "string ||| Datadog's agentless OTLP metrics intake endpoint. Empty when not configured."
+  value       = local.otlp_metrics_endpoint
+  description = "string ||| Datadog's agentless OTLP metrics intake endpoint, defaulted from the configured Datadog site."
 }
 
 output "otlp_traces_endpoint" {
-  value       = var.otlp_traces_endpoint
-  description = "string ||| Datadog's agentless OTLP traces intake endpoint. Empty when not configured."
+  value       = local.otlp_traces_endpoint
+  description = "string ||| Datadog's agentless OTLP traces intake endpoint, defaulted from the configured Datadog site."
 }
 
 output "api_key_secret_id" {

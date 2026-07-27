@@ -69,10 +69,12 @@ alongside `aws-ecs-datadog` without double-billing log ingest.
 
 ## Agentless OTLP intake
 
-The k8s extenders and both direct capabilities deliver to Datadog's **agentless OTLP intake**.
-Datadog gates access to those endpoints per organization, and the endpoint hostnames differ by
-Datadog site — so they are configured explicitly on the datastore
-(`otlp_logs_endpoint`, `otlp_metrics_endpoint`, `otlp_traces_endpoint`). See the datastore README.
+The k8s extenders and both direct capabilities deliver to Datadog's **agentless OTLP intake** at
+`https://otlp.<site>/v1/<signal>`, derived from the datastore's `region`. Nothing to configure in the
+normal case; per-signal overrides exist on the datastore for orgs whose intake lives elsewhere.
+
+Datadog gates access to that intake per organization — the endpoints exist for every site, but yours
+may not be enabled. See the datastore README.
 
 `aws-ecs-datadog` and `aws-ecs-otel-datadog-agent` do **not** use the agentless intake and work
 without it.

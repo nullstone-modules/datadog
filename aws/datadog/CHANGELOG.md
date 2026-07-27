@@ -10,8 +10,15 @@
 * Region codes are now validated. `eu` and `gov` continue to work as aliases for `eu1` and `us1-fed`.
 * Added `datadog_site` and `datadog_api_url` outputs so consumers no longer carry their own copy of
   the site table.
-* Added `otlp_logs_endpoint`, `otlp_metrics_endpoint`, and `otlp_traces_endpoint` variables and
-  outputs for Datadog's agentless OTLP intake, used by the k8s extender and the direct capability.
+* Added `otlp_logs_endpoint`, `otlp_metrics_endpoint`, and `otlp_traces_endpoint` outputs for
+  Datadog's agentless OTLP intake, used by the k8s extender and the direct capability. They are
+  derived from the configured site as `https://otlp.<site>/v1/<signal>`; the same-named variables
+  override individual endpoints for an org whose intake lives elsewhere.
+* **Fixed:** the `us3` metrics intake URL pointed at the `us1` host
+  (`awsmetrics-intake.datadoghq.com`), which looks like a copy/paste slip carried since the module
+  was written. It now points at `event-platform-intake.us3.datadoghq.com`, matching the form used by
+  `us5` and `ap1` — the sites of the same generation, which also share `us3`'s newer logs intake
+  style. Worth confirming against a real us3 org.
 * Added an optional CloudWatch metric stream (`metric_stream_namespaces`, off by default) feeding the
   existing metrics delivery stream, plus a `metric_stream_arn` output. This is where CloudWatch
   metrics come from now that `aws-ecs-datadog` no longer runs the Datadog Agent.

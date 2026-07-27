@@ -49,11 +49,14 @@ direct capabilities emit `OTEL_EXPORTER_OTLP_<SIGNAL>_{ENDPOINT,PROTOCOL,HEADERS
 extenders emit one `otlphttp/datadog_<signal>` exporter per signal — headers are per-exporter in
 `otlphttp`, so per-signal headers force per-signal exporters.
 
-**The endpoint hostnames are not baked in.** Datadog's docs render them from a site selector rather
-than publishing a table, so they are explicit variables on the datastore
-(`otlp_logs_endpoint` / `otlp_metrics_endpoint` / `otlp_traces_endpoint`) with empty defaults.
-Consumers fail at plan time naming the signals whose endpoint is missing, rather than silently
-exporting into the void.
+**The endpoints are derived from the site.** Datadog's docs render the hostnames from a site selector
+rather than publishing a table, but the pattern is `https://otlp.<site>/v1/<signal>` — confirmed for
+us1 from the Datadog console, and probed for every other site: each returns 403 (auth required) with
+a valid certificate, while a hostname of the same depth that doesn't exist returns 404. Both
+datastores derive all three endpoints in `sites.tf`; the `otlp_*_endpoint` variables are overrides.
+
+Consumers still check: a datastore published before v0.2.0 has no such outputs, and they fail at plan
+time naming the signals whose endpoint is missing rather than silently exporting into the void.
 
 ### Fixed: EU and GovCloud reported to the wrong site
 
@@ -84,19 +87,17 @@ distinct too (`datadog-otel-collector`, 4317/4318, `<resource>-datadog-otel`).
 
 ### Needs a decision or an external action
 
-- [ ] **Fill in the OTLP intake endpoints.** Open the
-      [intake docs](https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/) with the Nullstone
-      site selected and copy the three per-signal endpoints into the datastore defaults, or leave
-      them as required inputs. Four modules are unusable until a user sets them.
-- [ ] **Request agentless intake access** from Datadog if the org doesn't already have it. Gates the
-      extenders and both direct capabilities (not the ECS path).
+- [ ] **Request agentless intake access** from Datadog if the org doesn't already have it. The
+      endpoints exist for every site, but access is granted per organization. Gates the extenders and
+      both direct capabilities (not the ECS path).
 - [ ] **Verify `metric_stream_output_format`.** Defaults to `opentelemetry1.0`; confirm that's what
       Datadog's Firehose metrics destination expects, since the delivery stream was originally built
       for Datadog Agent payloads. Low risk — the metric stream is off by default.
-- [ ] **Confirm the `platform: otel` / `subplatform: datadog` pair** is right for all three OTEL-ish
-      capabilities (`ecs-otel-datadog-agent`, `aws-otel-direct-datadog`, `gcp-otel-direct-datadog`).
-      They follow the Better Stack template, but three capabilities sharing one platform/subplatform
-      is new — worth checking how the module picker handles it.
+- [ ] **Confirm the corrected `us3` metrics intake.** Changed from the `us1` host to
+      `event-platform-intake.us3.datadoghq.com/api/v2/awsmetrics?dd-protocol=aws-kinesis-firehose`,
+      inferred from the `us5`/`ap1` entries — the sites of the same generation, which also share
+      `us3`'s newer logs intake style. Both candidate hosts answer, so the form could not be settled
+      remotely; needs a us3 org to confirm end to end.
 
 ### Release mechanics
 
@@ -124,8 +125,9 @@ distinct too (`datadog-otel-collector`, 4317/4318, `<resource>-datadog-otel`).
 
 ### Known carry-overs
 
-* `aws/datadog/sites.tf` keeps the `us3` metrics intake URL pointing at the `us1` host, exactly as the
-  pre-consolidation module had it. Left verbatim rather than silently re-pointing a working delivery
-  stream — worth a look, but not a change to make blind.
-* `ap2` is a current Datadog site with no entry in the site table. No verified Firehose intake URLs
-  for it, so it was not invented.
+* `ap2` is a current Datadog site with no entry in the site table. Its OTLP intake host
+  (`otlp.ap2.datadoghq.com`) answers like the others, but there are no verified Firehose intake URLs
+  for it and `aws/datadog` needs those, so it was left out of both datastores rather than supported
+  asymmetrically.
+* Three capabilities share `platform: otel` / `subplatform: datadog`, following the Better Stack
+  template. Confirmed acceptable — `provider_types` and `appCategories` differentiate them.

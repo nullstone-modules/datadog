@@ -59,19 +59,21 @@ the ECS task metadata endpoint, which is both higher fidelity and cheaper than C
 
 ## Agentless OTLP intake
 
-The k8s extender and the direct capability deliver over Datadog's **agentless OTLP intake**. Those
-endpoints are per-signal, their hostnames vary by Datadog site, and Datadog grants access per
-organization — so they are configured explicitly here rather than derived from `region`:
+The k8s extender and the direct capability deliver over Datadog's **agentless OTLP intake**. It is
+per-signal and lives at `otlp.<site>`, so all three endpoints are derived from `region`:
 
-```hcl
-otlp_logs_endpoint    = "..."   # https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/logs/
-otlp_metrics_endpoint = "..."   # https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/metrics/
-otlp_traces_endpoint  = "..."   # https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/traces/
-```
+| Signal | Endpoint |
+|--------|----------|
+| logs | `https://otlp.<site>/v1/logs` |
+| metrics | `https://otlp.<site>/v1/metrics` |
+| traces | `https://otlp.<site>/v1/traces` |
 
-Open each page with your Datadog site selected and copy the endpoint it shows. Leave a signal's
-endpoint empty if you don't intend to forward it; consumers fail with an actionable error if they
-need one that isn't set.
+Nothing to configure in the normal case. `otlp_logs_endpoint`, `otlp_metrics_endpoint`, and
+`otlp_traces_endpoint` override individual endpoints for an org whose intake lives elsewhere.
+
+> **Datadog grants access to the OTLP intake per organization.** The endpoints exist for every site,
+> but yours may not be enabled — if telemetry is rejected, contact Datadog support. See
+> https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/.
 
 Neither `aws-ecs-datadog` nor `aws-ecs-otel-datadog-agent` uses the agentless intake — you don't
 need any of this to run the ECS path.
@@ -85,6 +87,6 @@ need any of this to run the ECS path.
 | `app_key` | — | Datadog App key. Stored in Secrets Manager. |
 | `metric_stream_namespaces` | `[]` | CloudWatch namespaces to stream. Empty creates no stream. |
 | `metric_stream_output_format` | `opentelemetry1.0` | Metric stream payload format. |
-| `otlp_logs_endpoint` | `""` | Agentless OTLP logs intake endpoint. |
-| `otlp_metrics_endpoint` | `""` | Agentless OTLP metrics intake endpoint. |
-| `otlp_traces_endpoint` | `""` | Agentless OTLP traces intake endpoint. |
+| `otlp_logs_endpoint` | derived | Override for the OTLP logs intake endpoint. |
+| `otlp_metrics_endpoint` | derived | Override for the OTLP metrics intake endpoint. |
+| `otlp_traces_endpoint` | derived | Override for the OTLP traces intake endpoint. |

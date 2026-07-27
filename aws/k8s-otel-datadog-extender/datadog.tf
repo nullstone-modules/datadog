@@ -61,7 +61,7 @@ resource "kubernetes_config_map_v1" "datadog" {
   lifecycle {
     precondition {
       condition     = length(local.missing_endpoints) == 0
-      error_message = "The connected datadog datastore has no OTLP intake endpoint configured for: ${join(", ", local.missing_endpoints)}. Set otlp_<signal>_endpoint on the datastore (see https://docs.datadoghq.com/opentelemetry/setup/otlp_ingest/), or drop those signals from this module's `signals` variable."
+      error_message = "The connected datadog datastore has no OTLP intake endpoint configured for: ${join(", ", local.missing_endpoints)}. Upgrade the connected datadog datastore to v0.2.0 or later, which derives these from the Datadog site, or set otlp_<signal>_endpoint on it explicitly."
     }
   }
 }

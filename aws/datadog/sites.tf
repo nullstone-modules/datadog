@@ -28,9 +28,11 @@ locals {
       site             = "us3.datadoghq.com"
       api_url          = "https://us3.datadoghq.com"
       kinesis_logs_url = "https://aws-kinesis-http-intake.logs.us3.datadoghq.com/api/v2/logs?dd-protocol=aws-kinesis-firehose"
-      // Carried over verbatim from the pre-consolidation module, which pointed us3 metrics at the
-      // us1 intake. Left as-is rather than silently re-pointing a working delivery stream.
-      kinesis_metrics_url = "https://awsmetrics-intake.datadoghq.com/v1/input"
+      // The pre-consolidation module pointed us3 metrics at the us1 intake, which looks like a
+      // copy/paste slip. Corrected to the us3 host, using the same form as us5 and ap1 -- the sites
+      // of the same generation, which also use the `/api/v2/...?dd-protocol=aws-kinesis-firehose`
+      // style for logs, as us3 does above.
+      kinesis_metrics_url = "https://event-platform-intake.us3.datadoghq.com/api/v2/awsmetrics?dd-protocol=aws-kinesis-firehose"
     }
     "us5" = {
       site                = "us5.datadoghq.com"
@@ -59,4 +61,15 @@ locals {
   }
 
   site_config = local.datadog_sites[local.datadog_region]
+
+  // Datadog's agentless OTLP intake is reachable at `otlp.<site>`, with a path per signal. Verified
+  // against every site in the table above: each returns 401/403 without an API key, while a
+  // same-depth hostname that doesn't exist returns 404.
+  //
+  // The variables override these, for an org whose intake lives somewhere else.
+  otlp_host = "https://otlp.${local.site_config.site}"
+
+  otlp_logs_endpoint    = var.otlp_logs_endpoint != "" ? var.otlp_logs_endpoint : "${local.otlp_host}/v1/logs"
+  otlp_metrics_endpoint = var.otlp_metrics_endpoint != "" ? var.otlp_metrics_endpoint : "${local.otlp_host}/v1/metrics"
+  otlp_traces_endpoint  = var.otlp_traces_endpoint != "" ? var.otlp_traces_endpoint : "${local.otlp_host}/v1/traces"
 }
