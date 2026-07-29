@@ -6,6 +6,9 @@ terraform {
     aws = {
       source = "hashicorp/aws"
     }
+    datadog = {
+      source = "DataDog/datadog"
+    }
     random = {
       source = "hashicorp/random"
     }

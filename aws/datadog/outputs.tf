@@ -72,6 +72,16 @@ output "metric_stream_arn" {
   description = "string ||| The ARN of the CloudWatch metric stream feeding the metrics delivery stream. Empty when `metric_stream_namespaces` is not set."
 }
 
+output "subscribed_log_groups" {
+  value       = sort(tolist(local.subscribed_log_group_names))
+  description = "list(string) ||| CloudWatch log groups forwarded to the logs delivery stream, from `log_group_names` and `log_group_name_prefixes`."
+}
+
+output "aws_integration_role_arn" {
+  value       = try(aws_iam_role.datadog_integration[0].arn, "")
+  description = "string ||| The ARN of the IAM Role Datadog assumes to collect resource tags and metadata. Empty when `enable_aws_integration` is false."
+}
+
 output "delivery_role_arn" {
   value       = aws_iam_role.log_delivery.arn
   description = "string ||| The ARN of the IAM Role that has permission to deliver logs and metrics to both kinesis firehose deilvery streams"
