@@ -112,15 +112,29 @@ Set this only if you need a stable, predictable role name.
 EOF
 }
 
+variable "aws_integration_resource_collection" {
+  type        = bool
+  default     = true
+  description = <<EOF
+Collect AWS resource metadata alongside metrics, and grant the permissions that requires.
+
+When on, the role also gets Datadog's resource-collection permission set and the AWS-managed
+`SecurityAudit` policy, which Datadog's documentation requires for resource collection -- without it
+Datadog warns on the AWS integration tile and metadata is incomplete.
+
+Turn this off for a metrics-and-tags-only role with a smaller permission surface.
+EOF
+}
+
 variable "aws_integration_additional_policy_arns" {
   type        = list(string)
   default     = []
   description = <<EOF
-Extra IAM policy ARNs to attach to the Datadog integration role.
+Extra IAM policy ARNs to attach to the Datadog integration role, on top of the permissions Datadog
+publishes and the `SecurityAudit` policy attached for resource collection.
 
-The built-in policy covers tag collection plus RDS and ElastiCache resource collection -- what this
-module's own telemetry needs. Widen it here if you enable other Datadog AWS integrations, e.g.
-`["arn:aws:iam::aws:policy/SecurityAudit"]` for Cloud Security Posture Management.
+Most setups need nothing here. Use it for Datadog products with their own permission requirements,
+such as Cloud Security Posture Management.
 EOF
 }
 

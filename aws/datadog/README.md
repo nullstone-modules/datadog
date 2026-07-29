@@ -106,9 +106,30 @@ you set `metric_stream_namespaces`, you almost certainly want this too.
 The integration is scoped to an AWS account, so exactly one environment should own it per account.
 Datadog generates the external ID; the role's trust policy consumes it, so one apply is enough.
 
-The built-in policy covers tag collection plus RDS and ElastiCache resource collection — deliberately
-narrower than the ~100-action policy in Datadog's CloudFormation template, which spans every AWS
-integration Datadog offers. Widen it with `aws_integration_additional_policy_arns`.
+### Permissions
+
+The role's permissions are **read from Datadog**, not copied into this module. Two data sources —
+`datadog_integration_aws_iam_permissions_standard` and `..._resource_collection` — return the
+canonical set from Datadog's API, so the policy tracks what Datadog actually needs as they add
+services. A list maintained by hand rots silently: the failure mode is a missing metric or an empty
+tag months later, with nothing pointing back at the policy.
+
+The trade-off is that when Datadog changes their list, a diff appears here on the next plan. That is
+intended — it surfaces the change rather than hiding it.
+
+`aws_integration_resource_collection` (on by default) also attaches the AWS-managed **SecurityAudit**
+policy. Datadog's documentation requires it:
+
+> To use resource collection, you must attach AWS's managed SecurityAudit Policy to your Datadog IAM
+> role.
+
+Enabling collection without it half-works — Datadog raises a warning on the AWS integration tile and
+resource metadata comes back incomplete. Turn the variable off for a metrics-and-tags-only role with
+a smaller permission surface; `SecurityAudit` and the resource-collection permissions are then both
+omitted.
+
+`aws_integration_additional_policy_arns` covers Datadog products with their own requirements, such as
+Cloud Security Posture Management. Most setups need nothing there.
 
 ### Why polling is left on
 
@@ -165,6 +186,7 @@ need any of this to run the ECS path.
 | `aws_integration_role_name` | derived | Name of the role Datadog assumes. |
 | `aws_integration_regions` | `[]` | Regions Datadog collects from. Empty means this workspace's region. |
 | `aws_integration_excluded_namespaces` | Datadog's defaults | Namespaces Datadog should not poll. |
+| `aws_integration_resource_collection` | `true` | Collect resource metadata; attaches `SecurityAudit`. |
 | `aws_integration_additional_policy_arns` | `[]` | Extra policy ARNs for the integration role. |
 | `datadog_aws_account_id` | `464622532012` | Datadog-owned account allowed to assume the role. |
 | `aws_partition` | `aws` | AWS partition for the role ARN. |

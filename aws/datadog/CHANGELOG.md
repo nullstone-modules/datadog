@@ -10,9 +10,16 @@
   arrive carrying only CloudWatch's own dimensions — AWS resource tags, including the `stack`, `env`,
   and `block` tags Nullstone applies, are collected by Datadog through this role. Without it,
   streamed metrics cannot be attributed back to a block.
-  * The built-in policy is scoped to tag collection plus RDS and ElastiCache resource collection,
-    rather than the ~100-action policy in Datadog's CloudFormation template. Widen it with
-    `aws_integration_additional_policy_arns`.
+  * The role's permissions come from Datadog, not from a list copied into this module: the
+    `datadog_integration_aws_iam_permissions_standard` and
+    `..._resource_collection` data sources read the canonical set from Datadog's API, so the policy
+    tracks what Datadog needs as they add services. A hand-maintained copy rots silently — the
+    failure mode is a missing metric or an empty tag months later with nothing pointing at the
+    policy.
+  * Resource collection (`aws_integration_resource_collection`, on by default) additionally attaches
+    the AWS-managed `SecurityAudit` policy. Datadog's docs require it — "To use resource collection,
+    you must attach AWS's managed SecurityAudit Policy to your Datadog IAM role" — and without it
+    Datadog warns on the AWS integration tile and metadata is incomplete.
   * Metric polling is left enabled, and the namespaces you stream are deliberately *not* excluded
     from it. Datadog stops polling a streamed namespace on its own, and polling is what collects the
     tags — excluding them loses attribution without saving anything. The default
