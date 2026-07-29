@@ -1,4 +1,28 @@
-# 0.2.0 (Unreleased)
+# 0.2.3
+* Added CloudWatch **log subscriptions** for infrastructure log groups: `log_group_names` for exact
+  names and `log_group_name_prefixes` for discovery, both empty by default. This is how RDS Postgres
+  logs reach Datadog — datastore blocks cannot take capabilities, so the `aws-datadog-logs`
+  capability (which attaches to an app) does not apply to them. Also added a `subscribed_log_groups`
+  output. Nothing about the producing resource is changed; this only forwards what AWS already
+  writes.
+* Added the **Datadog AWS account integration** (`enable_aws_integration`, off by default) and the
+  IAM role it assumes, plus an `aws_integration_role_arn` output. Metrics from the metric stream
+  arrive carrying only CloudWatch's own dimensions — AWS resource tags, including the `stack`, `env`,
+  and `block` tags Nullstone applies, are collected by Datadog through this role. Without it,
+  streamed metrics cannot be attributed back to a block.
+  * The built-in policy is scoped to tag collection plus RDS and ElastiCache resource collection,
+    rather than the ~100-action policy in Datadog's CloudFormation template. Widen it with
+    `aws_integration_additional_policy_arns`.
+  * Metric polling is left enabled, and the namespaces you stream are deliberately *not* excluded
+    from it. Datadog stops polling a streamed namespace on its own, and polling is what collects the
+    tags — excluding them loses attribution without saving anything. The default
+    `aws_integration_excluded_namespaces` mirrors Datadog's own (`AWS/SQS`,
+    `AWS/ElasticMapReduce`, `AWS/Usage`).
+* **Fixed:** `metric_stream_output_format` accepted `json`, which Datadog's metric stream destination
+  does not support — a stream configured that way delivers records that are silently never ingested.
+  The value is now rejected at plan time. Only `opentelemetry1.0` and `opentelemetry0.7` remain.
+
+# 0.2.0
 * Moved into the `nullstone-modules/datadog` monorepo at `aws/datadog`. The module name is unchanged.
 * Switched from terraform to opentofu (`tool_name: opentofu`).
 * **Fixed:** a datastore configured with region `eu` or `gov` caused downstream agents to report to
