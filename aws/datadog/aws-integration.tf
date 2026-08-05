@@ -44,12 +44,13 @@ resource "datadog_integration_aws_account" "this" {
   }
 
   resources_config {
-    // Resource collection is what pulls in tags and resource metadata -- the whole point of this
-    // integration for our purposes.
-    extended_collection = true
+    // Resource collection is what pulls in resource metadata alongside the tags -- the whole point
+    // of this integration for our purposes. It requires the AWS-managed SecurityAudit policy,
+    // attached below; without it Datadog shows a warning on the AWS integration tile.
+    extended_collection = var.aws_integration_resource_collection
 
-    // Cloud Security Posture Management is a separate Datadog product and needs the much broader
-    // SecurityAudit policy. Left off; enable deliberately if you license it.
+    // Cloud Security Posture Management is a separate Datadog product. Left off; enable it
+    // deliberately if you license it.
     cloud_security_posture_management_collection = false
   }
 
@@ -123,52 +124,74 @@ resource "aws_iam_role_policy" "datadog_integration" {
   policy = data.aws_iam_policy_document.datadog_integration.json
 }
 
-// Scoped to what this module's telemetry actually needs: read the tags that make streamed metrics
-// attributable, and describe the resources those metrics come from.
+// The bulk of the permission list comes from Datadog rather than from a copy kept here.
 //
-// This is deliberately narrower than the ~100-action policy in Datadog's CloudFormation template,
-// which covers every AWS integration Datadog offers. Use `additional_policy_arns` to widen it if you
-// enable more of them.
+// Both data sources read the canonical set from Datadog's API, so the role tracks what Datadog
+// actually needs as they add services. A hand-maintained list silently rots: the failure mode is a
+// missing metric or an empty tag months later, with nothing pointing at the policy as the cause.
+//
+// The trade-off is that Datadog changing their list produces a diff here on the next plan. That is
+// the intended behavior -- it surfaces the change instead of hiding it.
+//
+// A small baseline set is pinned below and unioned in, so the role never regresses below what
+// Datadog's setup docs grant even if the API-published sets shift.
+data "datadog_integration_aws_iam_permissions_standard" "this" {}
+
+data "datadog_integration_aws_iam_permissions_resource_collection" "this" {}
+
+locals {
+  // The core permissions from Datadog's own AWS integration policy. These are the actions Datadog's
+  // setup docs and CloudFormation template grant for account-level metric and metadata collection.
+  //
+  // They are listed explicitly rather than left to the data sources above because the API-published
+  // sets do not always include all of them, and a missing one shows up as a whole service quietly
+  // absent from Datadog rather than as an error. `distinct` below folds out the overlap, so
+  // duplicates between this list and Datadog's are harmless.
+  datadog_integration_baseline_permissions = [
+    "account:GetAccountInformation",
+    "apigateway:GET",
+    "autoscaling:DescribeAutoScalingGroups",
+    "autoscaling:DescribeScalingActivities",
+    "budgets:ViewBudget",
+    "dynamodb:ListTables",
+    "ec2:DescribeInstances",
+    "ec2:DescribeInstanceStatus",
+    "ec2:DescribeSpotFleetRequests",
+    "ec2:DescribeVolumes",
+    "ecs:ListClusters",
+    "elasticloadbalancing:DescribeLoadBalancers",
+    "iam:ListAccountAliases",
+    "ses:GetSendQuota",
+    "ses:GetSendStatistics",
+    "states:ListStateMachines",
+    "trustedadvisor:ListRecommendations",
+  ]
+
+  datadog_integration_permissions = sort(distinct(concat(
+    local.datadog_integration_baseline_permissions,
+    data.datadog_integration_aws_iam_permissions_standard.this.iam_permissions,
+    var.aws_integration_resource_collection ? data.datadog_integration_aws_iam_permissions_resource_collection.this.iam_permissions : [],
+  )))
+}
+
 data "aws_iam_policy_document" "datadog_integration" {
   statement {
-    sid       = "TagCollection"
+    sid       = "DatadogAWSIntegration"
     effect    = "Allow"
-    resources = ["*"]
-
-    actions = [
-      "tag:GetResources",
-      "tag:GetTagKeys",
-      "tag:GetTagValues",
-    ]
+    actions   = local.datadog_integration_permissions
+    resources = ["*"] // Datadog's own policy is account-wide; CloudWatch metrics cannot be scoped by resource anyway.
   }
+}
 
-  statement {
-    sid       = "CloudwatchMetadata"
-    effect    = "Allow"
-    resources = ["*"] // CloudWatch metrics cannot be restricted by resource.
+// Resource collection requires this on top of the permissions above. Datadog's docs are explicit:
+// "To use resource collection, you must attach AWS's managed SecurityAudit Policy to your Datadog
+// IAM role." Enabling collection without it still works partially, but Datadog flags a warning on
+// the AWS integration tile and metadata is incomplete.
+resource "aws_iam_role_policy_attachment" "datadog_integration_security_audit" {
+  count = local.aws_integration_enabled && var.aws_integration_resource_collection ? 1 : 0
 
-    actions = [
-      "cloudwatch:Describe*",
-      "cloudwatch:Get*",
-      "cloudwatch:List*",
-    ]
-  }
-
-  statement {
-    sid       = "ResourceCollection"
-    effect    = "Allow"
-    resources = ["*"]
-
-    actions = [
-      // `ec2:DescribeRegions` is how Datadog enumerates the regions it may query.
-      "ec2:DescribeRegions",
-      "ec2:DescribeTags",
-      "rds:Describe*",
-      "rds:List*",
-      "elasticache:Describe*",
-      "elasticache:List*",
-    ]
-  }
+  role       = aws_iam_role.datadog_integration[0].name
+  policy_arn = "arn:${var.aws_partition}:iam::aws:policy/SecurityAudit"
 }
 
 resource "aws_iam_role_policy_attachment" "datadog_integration_additional" {
