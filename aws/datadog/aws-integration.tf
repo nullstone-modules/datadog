@@ -116,14 +116,6 @@ data "aws_iam_policy_document" "datadog_integration_assume" {
   }
 }
 
-resource "aws_iam_role_policy" "datadog_integration" {
-  count = local.aws_integration_enabled ? 1 : 0
-
-  name   = "datadog-integration"
-  role   = aws_iam_role.datadog_integration[0].id
-  policy = data.aws_iam_policy_document.datadog_integration.json
-}
-
 // The bulk of the permission list comes from Datadog rather than from a copy kept here.
 //
 // Both data sources read the canonical set from Datadog's API, so the role tracks what Datadog
@@ -174,12 +166,106 @@ locals {
   )))
 }
 
+// Datadog's full permission set does not fit in an inline role policy, so these are customer-managed
+// policies attached to the role instead.
+//
+// AWS caps the *aggregate* size of every inline policy on a role at 10,240 characters, and that
+// quota cannot be raised. Splitting the actions across several inline policies therefore buys
+// nothing -- they all draw on the same budget. Managed policies are budgeted individually at 6,144
+// characters each, so the actions are chunked across as many as they need.
+//
+// IAM does not count whitespace toward either limit, so how the JSON is formatted is not a lever.
+//
+// See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html
+locals {
+  // 6,144 is the hard cap. Budgeting under it leaves room for the statement envelope and for the one
+  // action that straddles each boundary. The precondition below checks the real rendered documents
+  // rather than trusting this figure.
+  datadog_integration_policy_budget = 5500
+
+  // Running total of the rendered cost of each action and every action before it. One action costs
+  // its own length plus two quotes and a comma.
+  //
+  // Actions are packed into policies by this running total rather than by count. The list is sorted,
+  // so same-service actions sit together and a by-count split can land a whole chunk on a long
+  // prefix -- `elasticloadbalancing:` actions run ~50 characters against a ~33 character average,
+  // which is enough to overrun the cap even though the average says it fits.
+  datadog_integration_permission_offsets = [
+    for i, action in local.datadog_integration_permissions :
+    sum([for j in range(i + 1) : length(local.datadog_integration_permissions[j]) + 3])
+  ]
+
+  datadog_integration_permission_chars = sum([
+    for action in local.datadog_integration_permissions : length(action) + 3
+  ])
+
+  datadog_integration_policy_count = floor(
+    local.datadog_integration_permission_chars / local.datadog_integration_policy_budget
+  ) + 1
+
+  datadog_integration_permission_chunks = [
+    for bucket in range(local.datadog_integration_policy_count) : [
+      for i, action in local.datadog_integration_permissions : action
+      if floor(local.datadog_integration_permission_offsets[i] / local.datadog_integration_policy_budget) == bucket
+    ]
+  ]
+
+  // Every managed policy on the role counts against the same quota: the chunks here, SecurityAudit
+  // when resource collection is on, and anything the caller adds.
+  datadog_integration_attached_policy_count = (
+    length(local.datadog_integration_permission_chunks)
+    + (var.aws_integration_resource_collection ? 1 : 0)
+    + length(var.aws_integration_additional_policy_arns)
+  )
+}
+
 data "aws_iam_policy_document" "datadog_integration" {
+  count = length(local.datadog_integration_permission_chunks)
+
   statement {
-    sid       = "DatadogAWSIntegration"
+    sid       = "DatadogAWSIntegration${count.index}"
     effect    = "Allow"
-    actions   = local.datadog_integration_permissions
+    actions   = local.datadog_integration_permission_chunks[count.index]
     resources = ["*"] // Datadog's own policy is account-wide; CloudWatch metrics cannot be scoped by resource anyway.
+  }
+}
+
+resource "aws_iam_policy" "datadog_integration" {
+  count = local.aws_integration_enabled ? length(local.datadog_integration_permission_chunks) : 0
+
+  name   = "${local.aws_integration_role_name}-${count.index}"
+  tags   = local.tags
+  policy = data.aws_iam_policy_document.datadog_integration[count.index].json
+
+  lifecycle {
+    // Measures the document AWS will actually measure -- rendered, with whitespace stripped, since
+    // IAM ignores it. Catches an undersized budget at plan time instead of as a LimitExceeded on
+    // apply, which is how this was found the first time.
+    precondition {
+      condition = length(replace(
+        data.aws_iam_policy_document.datadog_integration[count.index].json, "/\\s/", ""
+      )) <= 6144
+
+      error_message = "Datadog integration policy ${count.index} exceeds the 6,144 character managed policy limit. Lower datadog_integration_policy_budget in aws-integration.tf so the permissions split across more policies."
+    }
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "datadog_integration" {
+  count = local.aws_integration_enabled ? length(local.datadog_integration_permission_chunks) : 0
+
+  role       = aws_iam_role.datadog_integration[0].name
+  policy_arn = aws_iam_policy.datadog_integration[count.index].arn
+}
+
+// A warning rather than an error: the quota defaults to 10 but is self-service raisable to 25, so
+// failing the plan would be wrong for an account that has already raised it. Naming the cause here
+// beats reading an opaque LimitExceeded on the attachment.
+check "datadog_integration_policy_quota" {
+  assert {
+    condition = !local.aws_integration_enabled || local.datadog_integration_attached_policy_count <= 10
+
+    error_message = "The Datadog integration role needs ${local.datadog_integration_attached_policy_count} managed policies, above the default quota of 10 per role. Request an increase (self-service, up to 25) or set aws_integration_resource_collection = false."
   }
 }
 

@@ -117,6 +117,16 @@ tag months later, with nothing pointing back at the policy.
 The trade-off is that when Datadog changes their list, a diff appears here on the next plan. That is
 intended — it surfaces the change rather than hiding it.
 
+That set does not fit in an inline role policy, so it is split across **customer-managed policies**
+attached to the role. AWS caps the aggregate size of all inline policies on a role at 10,240
+characters and will not raise it, so more inline policies would not have helped; managed policies are
+budgeted separately at 6,144 characters each. The actions are packed by size, so the number of
+policies follows the length of Datadog's list — expect one or two.
+
+Each role can hold 10 managed policies by default. The chunks, `SecurityAudit`, and anything in
+`aws_integration_additional_policy_arns` all count against that. If the total goes over, the plan
+emits a warning naming the count; the quota is self-service raisable to 25.
+
 `aws_integration_resource_collection` (on by default) also attaches the AWS-managed **SecurityAudit**
 policy. Datadog's documentation requires it:
 

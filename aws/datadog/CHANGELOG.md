@@ -1,3 +1,10 @@
+# 0.3.2
+* **Fixed:** the full permission set overran the 10,240 character limit on inline role policies,
+  failing the apply with `LimitExceeded`. Permissions are now split across customer-managed policies,
+  which are budgeted separately. The role's inline policy is replaced — expect it to be destroyed and
+  the managed policies created in its place. If the role ends up needing more than 10 managed
+  policies in total, the plan warns; that quota is self-service raisable to 25.
+
 # 0.3.1
 * **Fixed:** the integration role was missing permissions Datadog needs, including `ec2:Describe*`.
   Permissions now come from Datadog's API instead of a list maintained here, so the policy stays
