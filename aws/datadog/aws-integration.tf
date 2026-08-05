@@ -124,7 +124,7 @@ resource "aws_iam_role_policy" "datadog_integration" {
   policy = data.aws_iam_policy_document.datadog_integration.json
 }
 
-// The permission list comes from Datadog rather than from a copy kept here.
+// The bulk of the permission list comes from Datadog rather than from a copy kept here.
 //
 // Both data sources read the canonical set from Datadog's API, so the role tracks what Datadog
 // actually needs as they add services. A hand-maintained list silently rots: the failure mode is a
@@ -132,12 +132,43 @@ resource "aws_iam_role_policy" "datadog_integration" {
 //
 // The trade-off is that Datadog changing their list produces a diff here on the next plan. That is
 // the intended behavior -- it surfaces the change instead of hiding it.
+//
+// A small baseline set is pinned below and unioned in, so the role never regresses below what
+// Datadog's setup docs grant even if the API-published sets shift.
 data "datadog_integration_aws_iam_permissions_standard" "this" {}
 
 data "datadog_integration_aws_iam_permissions_resource_collection" "this" {}
 
 locals {
+  // The core permissions from Datadog's own AWS integration policy. These are the actions Datadog's
+  // setup docs and CloudFormation template grant for account-level metric and metadata collection.
+  //
+  // They are listed explicitly rather than left to the data sources above because the API-published
+  // sets do not always include all of them, and a missing one shows up as a whole service quietly
+  // absent from Datadog rather than as an error. `distinct` below folds out the overlap, so
+  // duplicates between this list and Datadog's are harmless.
+  datadog_integration_baseline_permissions = [
+    "account:GetAccountInformation",
+    "apigateway:GET",
+    "autoscaling:DescribeAutoScalingGroups",
+    "autoscaling:DescribeScalingActivities",
+    "budgets:ViewBudget",
+    "dynamodb:ListTables",
+    "ec2:DescribeInstances",
+    "ec2:DescribeInstanceStatus",
+    "ec2:DescribeSpotFleetRequests",
+    "ec2:DescribeVolumes",
+    "ecs:ListClusters",
+    "elasticloadbalancing:DescribeLoadBalancers",
+    "iam:ListAccountAliases",
+    "ses:GetSendQuota",
+    "ses:GetSendStatistics",
+    "states:ListStateMachines",
+    "trustedadvisor:ListRecommendations",
+  ]
+
   datadog_integration_permissions = sort(distinct(concat(
+    local.datadog_integration_baseline_permissions,
     data.datadog_integration_aws_iam_permissions_standard.this.iam_permissions,
     var.aws_integration_resource_collection ? data.datadog_integration_aws_iam_permissions_resource_collection.this.iam_permissions : [],
   )))

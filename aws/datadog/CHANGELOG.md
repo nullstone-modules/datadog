@@ -16,6 +16,13 @@
     tracks what Datadog needs as they add services. A hand-maintained copy rots silently — the
     failure mode is a missing metric or an empty tag months later with nothing pointing at the
     policy.
+  * On top of the API-published sets, a small baseline of core permissions from Datadog's own setup
+    docs is pinned in the module and unioned in (`account:GetAccountInformation`, `apigateway:GET`,
+    the `autoscaling`/`ec2`/`ecs`/`elasticloadbalancing`/`ses`/`states` describe-and-list actions,
+    `budgets:ViewBudget`, `dynamodb:ListTables`, `iam:ListAccountAliases`, and
+    `trustedadvisor:ListRecommendations`). The API sets do not always include all of them, and a
+    missing permission shows up as a whole service quietly absent from Datadog rather than as an
+    error. Duplicates between the two sources are folded out.
   * Resource collection (`aws_integration_resource_collection`, on by default) additionally attaches
     the AWS-managed `SecurityAudit` policy. Datadog's docs require it — "To use resource collection,
     you must attach AWS's managed SecurityAudit Policy to your Datadog IAM role" — and without it
