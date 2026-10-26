@@ -42,6 +42,12 @@ locals {
       name  = "OTEL_METRICS_EXPORTER"
       value = local.signal_exporters.metrics
     },
+    // Datadog's OTLP intake rejects cumulative sums and histograms (the SDK default), so counters
+    // and histograms silently never arrive without this.
+    {
+      name  = "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE"
+      value = "delta"
+    },
     {
       name  = "OTEL_METRICS_EXEMPLAR_FILTER"
       value = var.metrics_exemplar_filter
@@ -58,14 +64,15 @@ locals {
       name  = "OTEL_TRACES_SAMPLER"
       value = var.traces_sampler
     },
-    // Datadog derives `service` and `env` from these resource attributes.
+    // Datadog derives `service` and `env` from these resource attributes. `deployment.environment`
+    // is the deprecated spelling, kept alongside `.name` for older SDKs and tooling.
     {
       name  = "OTEL_SERVICE_NAME"
       value = local.block_name
     },
     {
       name  = "OTEL_RESOURCE_ATTRIBUTES"
-      value = "deployment.environment=${local.env_name}"
+      value = "deployment.environment.name=${local.env_name},deployment.environment=${local.env_name}"
     },
   ]
 

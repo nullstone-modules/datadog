@@ -36,12 +36,13 @@ Plus:
 | `OTEL_EXPORTER_OTLP_COMPRESSION` | `compression` variable |
 | `OTEL_LOGS_EXPORTER` | `otlp,console`, `otlp`, or `none` — see `signals` and `keep_console_logs` |
 | `OTEL_METRICS_EXPORTER` | `otlp` or `none` |
+| `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | fixed: `delta` — Datadog's intake rejects cumulative sums and histograms |
 | `OTEL_METRICS_EXEMPLAR_FILTER` | `metrics_exemplar_filter` variable |
 | `OTEL_METRIC_EXPORT_INTERVAL` | `metric_export_interval` variable |
 | `OTEL_TRACES_EXPORTER` | `otlp` or `none` |
 | `OTEL_TRACES_SAMPLER` | `traces_sampler` variable |
 | `OTEL_SERVICE_NAME` | the Nullstone block name |
-| `OTEL_RESOURCE_ATTRIBUTES` | `deployment.environment=<env>` |
+| `OTEL_RESOURCE_ATTRIBUTES` | `deployment.environment.name=<env>,deployment.environment=<env>` |
 
 Secret env vars (via `secrets`), for each signal in `signals`:
 
